@@ -1,0 +1,23 @@
+version: '3.7'
+
+services:
+  # Define your service(s) here
+  app:
+    # Build configuration
+     build:
+      container_name: bc2024-6-app
+    
+
+    # Define ports
+     ports:
+       - "3000:3000"
+
+    # Set environment variables
+    # environment:
+    #   - VAR_NAME=value
+
+    # Volume mapping
+     volumes:
+        - .:/app
+        - /app/node_modules
+        - NODE_ENV=development
