@@ -2,6 +2,7 @@ const express = require("express");
 const { program } = require("commander");
 const fs = require("fs");
 const multer = require("multer");
+const path = require("path");
 
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
@@ -68,23 +69,45 @@ let notes = {};
 
 if (fs.existsSync(options.cache)) {
   try {
-    const data = fs.readFileSync(options.cache, "utf8");
-    const cacheNotes = JSON.parse(data);
+    const stats = fs.statSync(options.cache);
+    if (!stats.isDirectory()) {
+      throw new Error(`Cache path "${options.cache}" is not a directory.`);
+    }
 
-    notes = cacheNotes.reduce((acc, { note_name, note }) => {
-      acc[note_name] = { note_name, note };
+    // Читання вмісту папки
+    const files = fs.readdirSync(options.cache);
+
+    console.log(`Files in directory ${options.cache}:`, files);
+
+    // Завантаження вмісту кожного текстового файлу
+    notes = files.reduce((acc, file) => {
+      const filePath = path.join(options.cache, file);
+      const fileStats = fs.statSync(filePath);
+
+      if (fileStats.isFile() && path.extname(file) === ".txt") {
+        const data = fs.readFileSync(filePath, "utf8");
+
+        // Використовуємо тільки ім'я файлу без розширення
+        const noteName = path.parse(file).name;
+
+        acc[noteName] = {
+          note_name: noteName, // Назва нотатки без ".txt"
+          note: data,          // Вміст файлу
+        };
+      } else {
+        console.warn(`Skipping non-text file: ${file}`);
+      }
+
       return acc;
     }, {});
 
-    console.log(`Cache file loaded from ${options.cache}`);
+    console.log(`Notes loaded from directory ${options.cache}`);
   } catch (error) {
-    console.error("Error reading cache file:", error);
+    console.error("Error reading cache directory:", error);
     process.exit(1);
   }
-} else {
-  fs.writeFileSync(options.cache, JSON.stringify([]));
-  console.log(`Cache file created at ${options.cache}`);
 }
+
 
 const app = express();
 
